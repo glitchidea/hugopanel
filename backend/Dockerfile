@@ -1,0 +1,30 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# System dependencies for git and psycopg2
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configure git
+RUN git config --global user.email "hugopanel@noreply.com" && \
+    git config --global user.name "HugoPanel"
+
+COPY requirements.txt .
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
+COPY . .
+
+RUN chmod +x docker-entrypoint.sh
+
+EXPOSE 8000
+
+ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["gunicorn", "hugopanel.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120"]
